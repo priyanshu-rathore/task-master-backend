@@ -1,54 +1,63 @@
-import express, { Application, Request, Response } from 'express';
-import cors from 'cors';
-import 'dotenv/config';
+import express, { Application, Request, Response } from "express";
+import cors from "cors";
+import "dotenv/config";
 
 // Import routes
-import projectRoutes from './api/routes/project.routes';
-import taskRoutes from './api/routes/task.routes';
-import aiRoutes from './api/routes/ai.routes';
+import projectRoutes from "./api/routes/project.routes";
+import taskRoutes from "./api/routes/task.routes";
+import aiRoutes from "./api/routes/ai.routes";
 
 const app: Application = express();
 
 // --- CORS Configuration ---
-// This is a more robust configuration than a simple app.use(cors()).
+const allowedOrigins = [
+  "https://task-master-pro-chi.vercel.app", // ✅ Your deployed frontend
+  "http://localhost:5173",                  // ✅ Local dev (Vite)
+];
+
 const corsOptions: cors.CorsOptions = {
-  // We are setting origin to true to reflect whatever the request origin is.
-  // This is effectively the same as '*' but can be more reliable in some proxy environments.
-  origin: true, 
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], // Explicitly allow all common methods
-  allowedHeaders: ['Content-Type', 'Authorization'], // Allow common headers
-  credentials: true, // Allow cookies/authorization headers
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      console.warn("❌ Blocked by CORS:", origin);
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
 };
 
 // --- Middleware Chain ---
-// The order here is CRITICAL.
 
-// 1. Enable CORS for all routes. This should be the first middleware.
+// 1. Enable CORS for all routes
 app.use(cors(corsOptions));
 
-// 2. Explicitly handle preflight requests.
-// This is a safety net. The cors() middleware usually handles this, but being explicit
-// can solve issues with certain proxies or non-standard client requests.
-app.options('*', cors(corsOptions));
+// 2. Handle preflight OPTIONS requests explicitly
+app.options("*", cors(corsOptions));
 
-// 3. Enable JSON body parsing. This comes AFTER CORS.
+// 3. Parse JSON requests
 app.use(express.json());
 
 // --- API Routes ---
-// Register your routes AFTER all the general middleware.
-app.use('/api/projects', projectRoutes);
-app.use('/api/tasks', taskRoutes);
-app.use('/api/ai', aiRoutes);
+app.use("/api/projects", projectRoutes);
+app.use("/api/tasks", taskRoutes);
+app.use("/api/ai", aiRoutes);
 
-// --- Health Check and 404 Handler ---
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'OK', timestamp: new Date().toISOString() });
+// --- Health Check Route ---
+app.get("/health", (req: Request, res: Response) => {
+  res.status(200).json({
+    status: "OK",
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
+  });
 });
 
-// Handle 404 for any routes not found. This should be the last route handler.
+// --- 404 Handler ---
 app.use((req, res) => {
-  res.status(404).json({ message: 'Not Found' });
+  res.status(404).json({ message: "Not Found" });
 });
 
 export default app;
-
