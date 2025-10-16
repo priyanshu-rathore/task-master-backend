@@ -10,7 +10,7 @@ import aiRoutes from "./api/routes/ai.routes"; // Import the new AI routes
 const app: Application = express();
 
 // --- Middlewares ---
-app.use(cors({origin : "*"}));
+app.use(cors({origin : "https://task-master-pro-chi.vercel.app/"}));
 app.use(express.json());
 
 // --- API Routes ---
